@@ -2,6 +2,7 @@ import time
 import sys
 import random
 import pickle
+import os
 
 import Player
 import Enemy
@@ -29,6 +30,9 @@ class Game:
     #saves the character class to a save file
     def saveCharacter(self):
         path = "./saves/{}.save".format(self.player.name)
+
+        if not os.path.exists('./saves'):
+            os.makedirs('./saves')
 
         with open(path, "wb+") as file:
             pickle.dump(self.player, file)
