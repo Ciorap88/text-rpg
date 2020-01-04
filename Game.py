@@ -54,6 +54,10 @@ class Game:
             except:
                 print("Invalid name. Try again or type 'new game' to create a new character.")
                 time.sleep(.5)
+
+        print("Welcome back, {}!".format(self.player.name))
+        time.sleep(.5)
+        
         self.gameLoop()
 
     #the character creation
@@ -81,11 +85,6 @@ class Game:
             time.sleep(2)
 
         self.gameLoop()
-
-    #the list of commands
-    #TODO make a proper *list* of commands
-    def helpMessage(self):
-        print("'help', 'explore', 'drink potion', 'bossfight', 'upgrade gear', 'shop', 'stats', 'quit', 'save'\n")
 
     #this is where the player can upgrade his equipment
     def upgrade(self):
@@ -239,22 +238,39 @@ class Game:
     #this is the main game loop, where the player chooses what to do
     def gameLoop(self):
         print("You wake up in a forest")
+
+        commandsList = ['help', 'explore', 'drink potion', 'bossfight', 'upgrade gear', 'shop', 'stats', 'quit', 'save']
+
         while True:
             command = input()
+
+            if command not in commandsList:
+                print("Invalid command. Type 'help' for the list of commands.")
+                continue
+
             if command == 'quit':
                 sys.exit()
+
             elif command == 'help':
-                self.helpMessage()
+                for com in commandsList:
+                    print("'{}'".format(com), end = " ")
+                print()
+
             elif command == 'upgrade gear':
                 self.upgrade()
+
             elif command == 'explore':
                 self.explore()
+
             elif command == "stats":
                 self.player.printStats()
+
             elif command == "shop":
                 self.shop()
+
             elif command == "drink potion":
                 self.player.drinkPotion()
+
             elif command == "save":
                 self.saveCharacter()
 
