@@ -4,14 +4,15 @@ import random
 
 import Game
 import Enemy
+import Boss
 
 
-
-class Character:
+class Player:
     def __init__(self, name):
         self.name = name
+        self.bossesKilled = 0
         self.battlesWon = 0
-        self.gold = 999999
+        self.gold = 99
         self.hp = 100
         self.totalHp = 100
         self.level = 1
@@ -61,7 +62,12 @@ class Character:
             goldLost = int(random.randrange(25, 50) / 100 * self.gold)
             self.gold -= goldLost
             self.hp = self.totalHp
+
             print("You died and lost {} gold!".format(goldLost))
+            time.sleep(2)
+
+            print("You wake up in a dark place.")
+
             return True
         return False
 
@@ -75,9 +81,12 @@ class Character:
         return dmg
 
     #here the player takes damage after the enemy's turn in a battle
-    def getDamaged(self, dmg):
+    def getDamaged(self, enemy, dmg):
         self.hp -= dmg
-        print("The enemy attacked you, dealing {} damage! {}/{} HP left.".format(dmg, self.hp, self.totalHp))
+        if type(enemy) is Boss.Boss:
+            print("{} attacked you, dealing {} damage! {}/{} HP left.".format(enemy.name, dmg, self.hp, self.totalHp))
+        else:
+            print("The enemy attacked you, dealing {} damage! {}/{} HP left.".format(dmg, self.hp, self.totalHp))
         time.sleep(.5)
 
     #restore HP after the player drinks a health potion

@@ -4,6 +4,7 @@ import random
 
 import Player
 import Game
+import Boss
 
 
 
@@ -20,18 +21,24 @@ class Enemy:
         self.exp = 20 * self.level ** 2 + random.randint(-int(self.level), int(self.level))
 
     #death check
-    def dead(self):
+    def dead(self, player):
         if self.hp <= 0:
+            player.gold += self.gold
+            player.exp += self.exp 
+            player.battlesWon += 1
+
             print("You won the battle!")
+            time.sleep(.5)
             print("You earned {} gold and {} experience points!".format(self.gold, self.exp))
+            
             return True
         return False
 
-    #damage that is dealt the player
+    #damage that is dealt to the player
     def calcDamage(self, player):
         attack = self.attack 
         defense = player.calcDefense()
-        dmg = random.randint(-int(attack/10), int(attack/10))+ attack - defense
+        dmg = random.randint(-int(attack/10), int(attack/10)) + attack - defense
         if dmg < 0:
             dmg = 0
         return dmg

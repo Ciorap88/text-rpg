@@ -6,6 +6,7 @@ import os
 
 import Player
 import Enemy
+import Boss
 
 
 #the game class that uses all the other classes
@@ -63,7 +64,7 @@ class Game:
     #the character creation
     def createCharacter(self):
         name = str(input("What do you want your character's name to be?\n"))
-        self.player = Player.Character(name)
+        self.player = Player.Player(name)
         print("Cool! Hi, {}!".format(self.player.name))
         time.sleep(1)
 
@@ -94,10 +95,8 @@ class Game:
         print("You have {} gold.".format(self.player.gold))
         time.sleep(.2)
 
-        #this doesn't look too good and clean
         valid = False  
-        sufficientGold = False 
-        while not valid or not sufficientGold:
+        while True:
             print("Type the name of the item you wish to upgrade or 'return' if you want to return to the game.")
             command = str(input())
             if command == 'return':
@@ -110,35 +109,47 @@ class Game:
                 time.sleep(.2)
                 continue
 
-            if valid and self.player.gold >= self.player.cost[command]:
-                sufficientGold = True
-
-            if sufficientGold:
+            upgraded = False
+            if self.player.gold >= self.player.cost[command]:
                 self.player.eq[command] += 1
                 self.player.gold -= self.player.cost[command]
                 self.player.cost[command] = int(self.player.cost[command] * 1.75)
                 print("You have successfully upgraded your {}".format(command))
-                time.sleep(.2)
-                self.upgrade()
+                upgraded = True
             else:
                 print("Insufficient gold.")
-                time.sleep(.2)
+            time.sleep(.5)
+
+            if upgraded:
+                self.upgrade()
+                break
+
     
-    #a battle with a new enemy
-    def battle(self):
+    #a method that initializes a new enemy based on the player's level
+    def getEnemy(self):
         firstNamesList = ["A weird ", "An old ", "A fat ", "An angry ", "A nice "]
         secondNamesList = ["goblin", "dude", "tree", "rat", "wasp", "mosquito", "kid", "zombie", "programmer"]
-        enemyName = firstNamesList[random.randint(0, len(firstNamesList)-1)] + secondNamesList[random.randint(0, len(secondNamesList)-1)]
+
+        enemyName = random.choice(firstNamesList) + random.choice(secondNamesList)
         enemyLevel = self.player.level + random.randint(-2, 2)
         if self.player.level <= 3:
             enemyLevel = self.player.level
 
-        enemy = Enemy.Enemy(enemyLevel, enemyName)
+        ret = Enemy.Enemy(enemyLevel, enemyName)
 
         if self.player.itemUses["Gold Magnet"] > 0:
-            enemy.gold *= 2
+            ret.gold *= 2
+            self.player.itemUses["Gold Magnet"] -= 1
+
         if self.player.itemUses["EXP Ring"] > 0:
-            enemy.exp *= 2 
+            self.player.itemUses["EXP Ring"] -= 1
+            ret.exp *= 2 
+
+        return ret
+
+    #a battle with a new enemy
+    def battle(self):
+        enemy = self.getEnemy()
 
         print("{} jumped you!".format(enemy.name))
         time.sleep(.5)
@@ -146,19 +157,7 @@ class Game:
         #the actual battle
         playersTurn = True
         while True:
-            if self.player.dead():
-                return
-            if enemy.dead():
-                if self.player.itemUses["Gold Magnet"] > 0:
-                    self.player.itemUses["Gold Magnet"] -= 1
-                self.player.gold += enemy.gold
-
-                if self.player.itemUses["EXP Ring"] > 0:
-                    self.player.itemUses["EXP Ring"] -= 1
-                self.player.exp += enemy.exp
-                
-                self.player.battlesWon += 1
-
+            if self.player.dead() or enemy.dead(self.player):
                 return
 
             if playersTurn:
@@ -168,12 +167,13 @@ class Game:
             else:
                 playersTurn = True
                 dmg = enemy.calcDamage(self.player)
-                self.player.getDamaged(dmg)
+                self.player.getDamaged(enemy, dmg)
 
     #here the player can buy items that give him bonuses or health potions
-    def shop(self):
-        print("Hi! I'm the merchant. I sell stuff. Take a look.")
-        time.sleep(1)
+    def shop(self, showMessage):
+        if showMessage:
+            print("Hi! I'm the merchant. I sell stuff. Take a look.")
+            time.sleep(1)
 
         #the descriptions of the items
         itemsList = {
@@ -192,33 +192,39 @@ class Game:
             print ("{}: {} (costs {} gold)".format(item, itemsList[item], itemsCost[item]))
             time.sleep(.5)
 
-        #same thing, doesn't look that clean
         valid = False
-        sufficientGold = False
         while True:
             print("Type the name of the item you wish to buy or 'return' if you want to get back to the game.")
             time.sleep(.2)
             command = str(input())
+
             if command == 'return':
                 return
+
             for item in itemsList:
                 if command == item:
                     valid = True
             if not valid:
                 print("Invalid command.")
                 time.sleep(.5)
-                continue 
-            if valid and self.player.gold >= itemsCost[command]:
-                sufficientGold = True
-            if sufficientGold:
+                continue
+
+            bought = False
+            if self.player.gold >= itemsCost[command]:
                 self.player.gold -= itemsCost[command]
                 print(" You have bought a {}.".format(command))
+                bought = True
                 if command == "Health Potion":
                     self.player.itemUses[command] += 1
                 else:
                     self.player.itemUses[command] += 10
             else:
                 print("Insufficient gold.")
+            time.sleep(.5)
+
+            if bought:
+                self.shop(False)
+                break
 
     def explore(self):
         #a random number that decides what is going to happen
@@ -233,15 +239,47 @@ class Game:
             self.battle()
             self.player.levelUp()
 
-    #TODO boss battles
+    #pretty much identical to the enemy battle
+    def bossBattle(self):
+        boss = Boss.Boss(self.player.bossesKilled+1)
+
+        print("{} is approaching you!".format(boss.name))
+        time.sleep(2)
+        print(boss.text)
+        time.sleep(2)
+
+        playersTurn = True
+
+        while True:
+            if self.player.dead() or boss.dead(self.player):
+                return
+
+            if playersTurn:
+                playersTurn = False
+                dmg = self.player.calcDamage(boss)
+                boss.getDamaged(dmg)
+            else:
+                playersTurn = True
+                dmg = boss.calcDamage(self.player)
+                self.player.getDamaged(boss, dmg)
+
+    #if the player has defeated the last boss
+    def end(self):
+        for i in range(1, 4):
+            print("You have completed the game! Thanks for playing!")
+            time.sleep(.5)
+        time.sleep(2)
+        sys.exit()
+
 
     #this is the main game loop, where the player chooses what to do
     def gameLoop(self):
-        print("You wake up in a forest")
-
-        commandsList = ['help', 'explore', 'drink potion', 'bossfight', 'upgrade gear', 'shop', 'stats', 'quit', 'save']
+        commandsList = ['help', 'explore', 'drink potion', 'boss battle', 'upgrade gear', 'shop', 'stats', 'quit', 'save']
 
         while True:
+            if self.player.bossesKilled == 3:
+                self.end()
+
             command = input()
 
             if command not in commandsList:
@@ -266,12 +304,18 @@ class Game:
                 self.player.printStats()
 
             elif command == "shop":
-                self.shop()
+                self.shop(True)
 
             elif command == "drink potion":
                 self.player.drinkPotion()
 
             elif command == "save":
                 self.saveCharacter()
+
+            elif command == "boss battle":
+                self.bossBattle()
+
+            if command == "upgrade gear" or command == "shop":
+                print("You returned to the dark place.")
 
 
